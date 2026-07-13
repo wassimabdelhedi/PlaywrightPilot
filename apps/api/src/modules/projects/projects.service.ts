@@ -9,8 +9,8 @@
 // fonctions ne changera pas, seul l'appelant (le contrôleur) changera.
 
 import { prisma } from "@platform/database";
-import { NotFoundError } from "../../lib/errors";
-import type { CreateProjectInput, ListProjectsQuery, UpdateProjectInput } from "./projects.schema";
+import { NotFoundError } from "../../lib/errors.js";
+import type { CreateProjectInput, ListProjectsQuery, UpdateProjectInput } from "./projects.schema.js";
 
 export async function createProject(organizationId: string, input: CreateProjectInput) {
   return prisma.project.create({

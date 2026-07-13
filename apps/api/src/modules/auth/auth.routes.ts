@@ -2,11 +2,11 @@
 
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { asyncHandler } from "../../lib/async-handler";
-import { validate } from "../../middleware/validate";
-import { authenticate } from "../../middleware/authenticate";
-import * as controller from "./auth.controller";
-import { loginSchema, refreshSchema, registerSchema } from "./auth.schema";
+import { asyncHandler } from "../../lib/async-handler.js";
+import { validate } from "../../middleware/validate.js";
+import { authenticate } from "../../middleware/authenticate.js";
+import * as controller from "./auth.controller.js";
+import { loginSchema, refreshSchema, registerSchema } from "./auth.schema.js";
 
 export const authRouter = Router();
 

@@ -3,7 +3,7 @@
 //   router.delete("/:id", authenticate, authorize("OWNER", "ADMIN"), ...)
 
 import type { NextFunction, Request, Response } from "express";
-import { ForbiddenError } from "../lib/errors";
+import { ForbiddenError } from "../lib/errors.js";
 
 export function authorize(...allowedRoles: string[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {

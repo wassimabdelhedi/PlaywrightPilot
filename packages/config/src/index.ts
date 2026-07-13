@@ -12,21 +12,21 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   API_BASE_URL: z.string().url().default("http://localhost:4000"),
   // --- Base de données ---
-  DATABASE_URL: z.string().url(),
- // --- Sécurité (utilisé dès la Phase 4, validé dès maintenant) ---
- JWT_SECRET:z.string().min(32," jwt doit contenir au moin 32 caracteres"),
- JWT_EXPIRES_IN: z.string().default("15m"),
-   // --- Logging ---
+  DATABASE_URL: z.string().min(1, "DATABASE_URL est requise"),
+  // --- Sécurité ---
+  JWT_SECRET: z.string().min(32, "JWT_SECRET doit contenir au moins 32 caractères"),
+  JWT_EXPIRES_IN: z.string().default("15m"),
+  REFRESH_TOKEN_EXPIRES_IN_DAYS: z.coerce.number().int().positive().default(30),
+  // --- Logging ---
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
-    // --- CORS ---
+  // --- CORS ---
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
 
-const _config:AppConfig = envSchema.infer(typeof envSchema);
-function loadingConfig() : AppConfig {
-   const parsed = envSchema.safeParse(process.env);
+function loadConfig(): AppConfig {
+  const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
     // On formate les erreurs Zod en liste lisible avant de tuer le process.
@@ -40,6 +40,7 @@ function loadingConfig() : AppConfig {
   }
 
   return parsed.data;
-} 
+}
+
 // Singleton — chargé une seule fois, importé partout dans le monorepo.
 export const config = loadConfig();

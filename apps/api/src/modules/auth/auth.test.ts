@@ -43,7 +43,7 @@ interface AccessTokenPayload {
 }
 
 function generateAccessToken(payload: AccessTokenPayload): string {
-  return jwt.sign(payload, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN });
+  return jwt.sign(payload, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN as any });
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {

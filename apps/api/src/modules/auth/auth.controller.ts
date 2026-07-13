@@ -1,8 +1,8 @@
 // apps/api/src/modules/auth/auth.controller.ts
 
 import type { Request, Response } from "express";
-import { sendSuccess } from "../../lib/response";
-import * as authService from "./auth.service";
+import { sendSuccess } from "../../lib/response.js";
+import * as authService from "./auth.service.js";
 
 function requestMeta(req: Request) {
   return { userAgent: req.headers["user-agent"], ipAddress: req.ip };

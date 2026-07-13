@@ -4,8 +4,8 @@
 // rapide et ne crée pas de dépendance Postgres sur le chemin chaud de
 // CHAQUE requête protégée.
 import type { NextFunction, Request, Response } from "express";
-import { UnauthorizedError } from "../lib/errors";
-import { verifyAccessToken } from "../modules/auth/auth.service";
+import { UnauthorizedError } from "../lib/errors.js";
+import { verifyAccessToken } from "../modules/auth/auth.service.js";
 
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
   const header = req.headers.authorization;

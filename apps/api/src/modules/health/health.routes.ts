@@ -4,7 +4,7 @@
 
 import { Router } from "express";
 import { prisma } from "@platform/database";
-import { sendSuccess } from "../../lib/response";
+import { sendSuccess } from "../../lib/response.js";
 
 export const healthRouter = Router();
 

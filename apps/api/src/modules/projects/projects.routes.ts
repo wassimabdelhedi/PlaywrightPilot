@@ -3,17 +3,19 @@
 // modules futurs (discoveries, scenarios, executions...).
 
 import { Router } from "express";
-import { asyncHandler } from "../../lib/async-handler";
-import { validate } from "../../middleware/validate";
-import * as controller from "./projects.controller";
+import { asyncHandler } from "../../lib/async-handler.js";
+import { validate } from "../../middleware/validate.js";
+import { authenticate } from "../../middleware/authenticate.js";
+import * as controller from "./projects.controller.js";
 import {
   createProjectSchema,
   listProjectsQuerySchema,
   projectIdParamSchema,
   updateProjectSchema,
-} from "./projects.schema";
+} from "./projects.schema.js";
 
 export const projectsRouter = Router();
+projectsRouter.use(authenticate);
 
 projectsRouter.post("/", validate(createProjectSchema, "body"), asyncHandler(controller.create));
 

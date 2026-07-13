@@ -10,8 +10,8 @@ import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import { prisma } from "@platform/database";
 import { config } from "@platform/config";
-import { ConflictError, UnauthorizedError } from "../../lib/errors";
-import type { LoginInput, RegisterInput } from "./auth.schema";
+import { ConflictError, UnauthorizedError } from "../../lib/errors.js";
+import type { LoginInput, RegisterInput } from "./auth.schema.js";
 
 // --- Hashing de mot de passe ---
 //
@@ -43,7 +43,7 @@ interface AccessTokenPayload {
 }
 
 function generateAccessToken(payload: AccessTokenPayload): string {
-  return jwt.sign(payload, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN });
+  return jwt.sign(payload, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN as any });
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {

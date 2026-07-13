@@ -5,9 +5,9 @@
 // trace brute ou un message d'erreur Prisma non formaté au client.
 
 import type { NextFunction, Request, Response } from "express";
-import {Prisma}from "@platform/database";
-import { AppError } from "../lib/errors";
-import { sendError } from "../lib/response";
+import {Prisma} from "@platform/database";
+import { AppError } from "../lib/errors.js";
+import { sendError } from "../lib/response.js";
 
 export function errorHandler (
  err : unknown,

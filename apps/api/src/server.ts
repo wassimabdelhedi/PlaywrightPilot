@@ -7,7 +7,7 @@
 import { config } from "@platform/config";
 import { logger } from "@platform/logger";
 import { prisma } from "@platform/database";
-import { createApp } from "./app";
+import { createApp } from "./app.js";
 
 const app = createApp();
 

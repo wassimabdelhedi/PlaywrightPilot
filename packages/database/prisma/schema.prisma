@@ -7,6 +7,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/client"
 }
 
 datasource db {
@@ -145,11 +146,30 @@ model User {
   updatedAt      DateTime @updatedAt
 
   organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  refreshTokens     RefreshToken[]
   triggeredExecutions Execution[]        @relation("TriggeredBy")
   reviewedSuggestions SelfHealingSuggestion[] @relation("ReviewedBy")
 
   @@index([organizationId])
   @@map("users")
+}
+
+model RefreshToken {
+  id                String   @id @default(cuid())
+  userId            String
+  tokenHash         String   @unique
+  userAgent         String?
+  ipAddress         String?
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
 }
 
 // ============================================================

@@ -9,10 +9,10 @@ import helmet from "helmet";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { config } from "@platform/config";
-import { requestContext } from "./middleware/request-context";
-import { errorHandler } from "./middleware/error-handler";
-import { apiRouter } from "./routes";
-import { sendError } from "./lib/response";
+import { requestContext } from "./middleware/request-context.js";
+import { errorHandler } from "./middleware/error-handler.js";
+import { apiRouter } from "./routes/index.js";
+import { sendError } from "./lib/response.js";
 
 export function createApp() {
   const app = express();

@@ -15,7 +15,9 @@ export class AppError extends Error {
     this.code = code;
     this.details = details;
     this.name = this.constructor.name;
-    Error.captureStackTrace(this, this.constructor);
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor);
+    }
   }
 }
 

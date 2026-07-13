@@ -5,7 +5,7 @@
 
 import type { NextFunction, Request, Response } from "express";
 import type { ZodSchema } from "zod";
-import { ValidationError } from "../lib/errors";
+import { ValidationError } from "../lib/errors.js";
 
 type RequestPart = "body" | "query" | "params";
 

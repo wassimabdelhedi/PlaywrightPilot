@@ -12,6 +12,6 @@ COPY package ./packages
 RUN corepack enable && pnpm install --frozen-lockfile
 WORKDIR /app/apps/api
 RUN pnpm build 
-Expose 4000 
+EXPOSE 4000 
 CMD ["pnpm","start"]
 
