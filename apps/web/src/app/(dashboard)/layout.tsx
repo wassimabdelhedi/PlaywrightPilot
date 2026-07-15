@@ -1,40 +1,23 @@
-// Layout racine : charge les 3 familles de polices définies dans le
-// système de design (Phase 5 §2) et monte le QueryProvider global.
-// Aucune logique d'authentification ici — elle vit dans le layout du
-// groupe (dashboard), pour que /login reste accessible sans session.
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 
-import type { Metadata } from "next";
-import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
-import { QueryProvider } from "@/providers/query-provider";
-import "../globals.css";
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
-  weight: ["500", "700"],
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
-});
-
-export const metadata: Metadata = {
-  title: "Plateforme de tests autonomes",
-  description: "Tests Playwright générés et exécutés par un agent IA",
-};
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
-      <body>
-        <QueryProvider>{children}</QueryProvider>
-      </body>
-    </html>
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card px-6 py-4 flex items-center justify-between">
+        <Link href="/projects" className="font-display font-bold text-xl text-foreground">
+          PlaywrightPilot
+        </Link>
+        <a 
+          href="/api/auth/logout" 
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          Déconnexion
+        </a>
+      </header>
+      <main className="mx-auto max-w-7xl p-6">
+        {children}
+      </main>
+    </div>
   );
 }

@@ -21,17 +21,28 @@ const COOKIE_OPTIONS = {
 };
 
 export function setSessionCookies(accessToken: string, refreshToken: string) {
-  const store = cookies();
-  // Durées alignées sur celles émises par l'API (Phase 4) : 15 min
-  // pour l'access token, 7 jours pour le refresh token.
-  store.set(ACCESS_TOKEN_COOKIE, accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 });
-  store.set(REFRESH_TOKEN_COOKIE, refreshToken, { ...COOKIE_OPTIONS, maxAge: 7 * 24 * 60 * 60 });
+  try {
+    const store = cookies();
+    // Durées alignées sur celles émises par l'API (Phase 4) : 15 min
+    // pour l'access token, 7 jours pour le refresh token.
+    store.set(ACCESS_TOKEN_COOKIE, accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 });
+    store.set(REFRESH_TOKEN_COOKIE, refreshToken, { ...COOKIE_OPTIONS, maxAge: 7 * 24 * 60 * 60 });
+  } catch {
+    // `cookies().set()` ne fonctionne que dans un Route Handler ou une Server Action.
+    // Les appels depuis des Server Components lisant l'API ne peuvent pas modifier
+    // les cookies dans ce contexte, donc on ignore ici.
+  }
 }
 
 export function clearSessionCookies() {
-  const store = cookies();
-  store.delete(ACCESS_TOKEN_COOKIE);
-  store.delete(REFRESH_TOKEN_COOKIE);
+  try {
+    const store = cookies();
+    store.delete(ACCESS_TOKEN_COOKIE);
+    store.delete(REFRESH_TOKEN_COOKIE);
+  } catch {
+    // `cookies().delete()` ne fonctionne que dans un Route Handler ou une Server Action.
+    // En dehors de ces contextes, on ne peut pas modifier les cookies.
+  }
 }
 
 export function getAccessToken(): string | undefined {

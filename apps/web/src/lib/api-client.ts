@@ -5,9 +5,25 @@
 // 401, tente UNE fois un rafraîchissement via la logique de rotation
 // de la Phase 4 avant de rejouer la requête originale.
 
-import { getAccessToken, getRefreshToken, setSessionCookies, clearSessionCookies } from "./session";
+import { getAccessToken, setSessionCookies, clearSessionCookies } from "./session";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:4000";
+const WEB_BASE_URL = process.env.NEXT_PUBLIC_WEB_URL;
+
+function getWebAppUrl() {
+  if (WEB_BASE_URL) return WEB_BASE_URL;
+
+  const host = headers().get("x-forwarded-host") ?? headers().get("host");
+  const proto = headers().get("x-forwarded-proto") ?? "http";
+
+  if (!host) {
+    throw new Error("Unable to determine web app host for session refresh");
+  }
+
+  return `${proto}://${host}`;
+}
 
 interface ApiResponse<T> {
   success: boolean;
@@ -39,21 +55,25 @@ async function rawFetch(path: string, init: RequestInit, accessToken?: string) {
 }
 
 async function tryRefresh(): Promise<string | null> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
+  const webUrl = getWebAppUrl();
+  const requestHeaders = headers();
+  const cookieHeader = requestHeaders.get("cookie");
 
-  const res = await rawFetch("/api/v1/auth/refresh", {
+  const res = await fetch(`${webUrl}/api/auth/refresh`, {
     method: "POST",
-    body: JSON.stringify({ refreshToken }),
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookieHeader ? { cookie: cookieHeader } : {}),
+    },
+    cache: "no-store",
+    credentials: "include",
   });
 
   if (!res.ok) {
-    clearSessionCookies();
     return null;
   }
 
-  const body: ApiResponse<{ accessToken: string; refreshToken: string }> = await res.json();
-  setSessionCookies(body.data.accessToken, body.data.refreshToken);
+  const body: ApiResponse<{ accessToken: string }> = await res.json();
   return body.data.accessToken;
 }
 
@@ -68,7 +88,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     accessToken = (await tryRefresh()) ?? undefined;
 
     if (!accessToken) {
-      throw new ApiError(401, "SESSION_EXPIRED", "Session expirée, veuillez vous reconnecter");
+      clearSessionCookies();
+      redirect("/api/auth/logout");
     }
 
     res = await rawFetch(path, init, accessToken);
@@ -77,6 +98,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   const body: ApiResponse<T> = await res.json();
 
   if (!res.ok || !body.success) {
+    if (res.status === 401) {
+      clearSessionCookies();
+      redirect("/api/auth/logout");
+    }
     throw new ApiError(res.status, body.error?.code ?? "UNKNOWN", body.error?.message ?? "Erreur inconnue");
   }
 

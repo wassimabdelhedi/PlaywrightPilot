@@ -208,3 +208,66 @@ export async function logout(rawToken: string) {
     data: { revokedAt: new Date() },
   });
 }
+
+// --- Mot de passe oublié ---
+
+export async function forgotPassword(input: { email: string }) {
+  const user = await prisma.user.findUnique({ where: { email: input.email } });
+  
+  if (!user || !user.isActive) {
+    // Ne jamais confirmer si l'email existe ou non en public.
+    return;
+  }
+
+  const rawToken = generateOpaqueToken();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: hashToken(rawToken),
+      expiresAt,
+    },
+  });
+
+  // TODO: Remplacer par un véritable envoi d'email via un service tier (Resend, SendGrid...)
+  console.log(`\n\n[MOCK EMAIL] Lien de réinitialisation pour ${user.email} :\nhttp://localhost:3000/reset-password?token=${rawToken}\n\n`);
+}
+
+export async function resetPassword(input: { token: string; newPassword: string }) {
+  const tokenHash = hashToken(input.token);
+  
+  const resetToken = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash },
+    include: { user: true },
+  });
+
+  if (!resetToken || resetToken.expiresAt < new Date()) {
+    throw new UnauthorizedError("Lien de réinitialisation invalide ou expiré");
+  }
+
+  if (!resetToken.user.isActive) {
+    throw new UnauthorizedError("Compte désactivé");
+  }
+
+  const passwordHash = await hashPassword(input.newPassword);
+
+  await prisma.$transaction(async (tx) => {
+    // Mettre à jour le mot de passe
+    await tx.user.update({
+      where: { id: resetToken.userId },
+      data: { passwordHash },
+    });
+
+    // Supprimer le token utilisé
+    await tx.passwordResetToken.delete({
+      where: { id: resetToken.id },
+    });
+
+    // Révoquer toutes les sessions existantes
+    await tx.refreshToken.updateMany({
+      where: { userId: resetToken.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  });
+}

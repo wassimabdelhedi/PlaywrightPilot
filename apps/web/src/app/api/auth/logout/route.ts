@@ -9,8 +9,6 @@ export async function POST() {
   const refreshToken = getRefreshToken();
 
   if (refreshToken) {
-    // Best-effort : on révoque côté API, mais on nettoie les cookies
-    // même si cet appel échoue (session locale invalide dans tous les cas).
     await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -20,4 +18,9 @@ export async function POST() {
 
   clearSessionCookies();
   return NextResponse.json({ success: true, data: null });
+}
+
+export async function GET(request: Request) {
+  clearSessionCookies();
+  return NextResponse.redirect(new URL("/login", request.url));
 }

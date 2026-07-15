@@ -37,7 +37,7 @@ async function loginAction(formData: FormData) {
   redirect("/projects");
 }
 
-export default function LoginPage({ searchParams }: { searchParams: { error?: string; redirectTo?: string } }) {
+export default function LoginPage({ searchParams }: { searchParams: { error?: string; redirectTo?: string; reset?: string } }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
@@ -52,6 +52,12 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
           </p>
         )}
 
+        {searchParams.reset === "success" && (
+          <p className="mb-4 rounded border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
+            Votre mot de passe a été réinitialisé avec succès.
+          </p>
+        )}
+
         <form action={loginAction} className="space-y-4">
           <div className="space-y-1">
             <label htmlFor="email" className="text-sm text-muted">
@@ -61,9 +67,14 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="password" className="text-sm text-muted">
-              Mot de passe
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="text-sm text-muted">
+                Mot de passe
+              </label>
+              <Link href="/forgot-password" className="text-xs text-primary underline-offset-2 hover:underline">
+                Mot de passe oublié ?
+              </Link>
+            </div>
             <Input id="password" name="password" type="password" required autoComplete="current-password" />
           </div>
 

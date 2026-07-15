@@ -38,3 +38,13 @@ export async function logout(req: Request, res: Response) {
 export async function me(req: Request, res: Response) {
   sendSuccess(res, req.user);
 }
+
+export async function forgotPassword(req: Request, res: Response) {
+  await authService.forgotPassword(req.body);
+  sendSuccess(res, { message: "Si l'email existe, un lien a été envoyé." });
+}
+
+export async function resetPassword(req: Request, res: Response) {
+  await authService.resetPassword(req.body);
+  sendSuccess(res, { message: "Mot de passe réinitialisé avec succès." });
+}
