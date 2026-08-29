@@ -1,7 +1,7 @@
 // apps/web/src/components/ui/button.tsx
 
 import { forwardRef } from "react";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ReactElement } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/cn";
 
@@ -26,11 +26,31 @@ export const buttonVariants = cva(
 
 export interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+    VariantProps<typeof buttonVariants> {
+  /** When true, merges button styles into the single child element instead of rendering a <button>. */
+  asChild?: boolean;
+}
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => (
-    <button ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props} />
-  )
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
+    const computedClass = cn(buttonVariants({ variant, size }), className);
+
+    if (asChild && children) {
+      const child = children as ReactElement<Record<string, unknown>>;
+      return {
+        ...child,
+        props: {
+          ...child.props,
+          className: cn(computedClass, child.props.className as string | undefined),
+        },
+      } as ReactElement;
+    }
+
+    return (
+      <button ref={ref} className={computedClass} {...props}>
+        {children}
+      </button>
+    );
+  }
 );
 Button.displayName = "Button";

@@ -10,6 +10,9 @@ export const createProjectSchema = z.object({
   baseUrl: z.string().url(),
   maxCrawlDepth: z.number().int().min(1).max(10).default(3),
   denylistPaths: z.array(z.string()).default([]),
+  authLoginUrl: z.string().url().optional().nullable(),
+  authUsername: z.string().optional().nullable(),
+  authPassword: z.string().optional().nullable(),
 });
 
 export const updateProjectSchema = createProjectSchema.partial();

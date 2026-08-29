@@ -11,7 +11,7 @@ import { createApp } from "./app.js";
 
 const app = createApp();
 
-const server = app.listen(config.PORT, () => {
+const server = app.listen(Number(config.PORT), '0.0.0.0', () => {
   logger.info({ port: config.PORT, env: config.NODE_ENV }, "API démarrée");
 });
 

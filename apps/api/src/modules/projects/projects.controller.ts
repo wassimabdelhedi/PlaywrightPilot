@@ -32,10 +32,58 @@ export async function getById(req: Request, res: Response) {
   sendSuccess(res, project);
 }
 
+export async function listExecutions(req: Request, res: Response) {
+  const organizationId = getOrganizationId(req);
+  const { prisma } = await import("@platform/database");
+  
+  const project = await prisma.project.findFirst({
+    where: { id: req.params.id, organizationId }
+  });
+  if (!project) throw new UnauthorizedError("Projet introuvable ou non autorisé");
+
+  const executions = await prisma.execution.findMany({
+    where: {
+      testCase: {
+        scenario: {
+          projectId: req.params.id
+        }
+      }
+    },
+    include: {
+      testCase: {
+        include: {
+          scenario: {
+            select: { title: true }
+          }
+        }
+      },
+      failureAnalysis: {
+        select: { classification: true }
+      }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100
+  });
+
+  sendSuccess(res, executions);
+}
+
 export async function update(req: Request, res: Response) {
   const organizationId = getOrganizationId(req);
   const project = await projectsService.updateProject(organizationId, req.params.id!, req.body);
   sendSuccess(res, project);
+}
+
+export async function triggerAutopilot(req: Request, res: Response) {
+  const organizationId = getOrganizationId(req);
+  await projectsService.runAutopilot(organizationId, req.params.id!);
+  sendSuccess(res, { message: "Auto-Pilot demarre en arriere-plan" }, 202);
+}
+
+export async function stopAutopilot(req: Request, res: Response) {
+  const organizationId = getOrganizationId(req);
+  await projectsService.stopAutopilot(organizationId, req.params.id!);
+  sendSuccess(res, { message: "Auto-Pilot arrete" });
 }
 
 export async function remove(req: Request, res: Response) {

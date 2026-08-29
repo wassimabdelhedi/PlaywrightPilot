@@ -1,23 +1,311 @@
-// packages/database/prisma/schema.prisma
-//
-// Schéma de données de la plateforme de tests autonomes IA.
-// Convention: tous les identifiants sont des cuid() (triables, sans collision,
-// plus courts qu'un UUID). Chaque table métier porte un lien direct ou indirect
-// vers Organization pour garantir le multi-tenant dès la Phase 2.
-
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/client"
+  provider        = "prisma-client-js"
+  output          = "../src/generated/client"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
-// ============================================================
-// ENUMS
-// ============================================================
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projects  Project[]
+  users     User[]
+
+  @@map("organizations")
+}
+
+model User {
+  id                  String                  @id @default(cuid())
+  organizationId      String
+  email               String                  @unique
+  passwordHash        String
+  fullName            String
+  role                UserRole                @default(MEMBER)
+  isActive            Boolean                 @default(true)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  triggeredExecutions Execution[]             @relation("TriggeredBy")
+  passwordResetTokens PasswordResetToken[]
+  refreshTokens       RefreshToken[]
+  reviewedSuggestions SelfHealingSuggestion[] @relation("ReviewedBy")
+  organization        Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id                String    @id @default(cuid())
+  userId            String
+  tokenHash         String    @unique
+  userAgent         String?
+  ipAddress         String?
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?
+  createdAt         DateTime  @default(now())
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("password_reset_tokens")
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  organizationId String
+  name           String
+  baseUrl        String
+  status         ProjectStatus @default(ACTIVE)
+  denylistPaths  String[]      @default([])
+  maxCrawlDepth  Int           @default(3)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  authLoginUrl   String?
+  authPassword        String?
+  authUsername        String?
+  llmRateLimitResetAt DateTime?
+  lastLlmError        String?
+  memories            AgentMemory[]
+  discoveries    Discovery[]
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reports        Report[]
+  scenarios      Scenario[]
+
+  @@index([organizationId])
+  @@map("projects")
+}
+
+model Discovery {
+  id           String          @id @default(cuid())
+  projectId    String
+  status       DiscoveryStatus @default(PENDING)
+  maxDepth     Int             @default(3)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  errorMessage String?
+  createdAt    DateTime        @default(now())
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pages        Page[]
+
+  @@index([projectId])
+  @@map("discoveries")
+}
+
+model Page {
+  id            String       @id @default(cuid())
+  discoveryId   String
+  url           String
+  title         String?
+  depth         Int
+  screenshotUrl String?
+  createdAt     DateTime     @default(now())
+  elements      DomElement[]
+  discovery     Discovery    @relation(fields: [discoveryId], references: [id], onDelete: Cascade)
+
+  @@unique([discoveryId, url])
+  @@index([discoveryId])
+  @@map("pages")
+}
+
+model DomElement {
+  id         String      @id @default(cuid())
+  pageId     String
+  type       ElementType
+  attributes Json?
+  isVisible  Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  css        String?
+  selectors  String[]
+  tag        String?
+  text       String?
+  xpath      String?
+  page       Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@map("dom_elements")
+}
+
+model Scenario {
+  id              String           @id @default(cuid())
+  projectId       String
+  title           String
+  description     String
+  priority        ScenarioPriority @default(MEDIUM)
+  status          ScenarioStatus   @default(DRAFT)
+  businessGoal    String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  scenarioType    String?
+  featureMemoryId String?
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testCases       TestCase[]
+
+  @@index([projectId])
+  @@index([featureMemoryId])
+  @@map("scenarios")
+}
+
+model TestCase {
+  id              String         @id @default(cuid())
+  scenarioId      String
+  filePath        String
+  sourceCode      String
+  status          TestCaseStatus @default(GENERATED)
+  generationModel String         @default("gpt-4o")
+  version         Int            @default(1)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  executions      Execution[]
+  scenario        Scenario       @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@index([scenarioId])
+  @@map("test_cases")
+}
+
+model Execution {
+  id                   String              @id @default(cuid())
+  testCaseId           String
+  status               ExecutionStatus     @default(QUEUED)
+  triggeredById        String?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  durationMs           Int?
+  errorMessage         String?
+  createdAt            DateTime            @default(now())
+  comparisonsAsBase    ComparisonRun[]     @relation("BaseExecution")
+  comparisonsAsCurrent ComparisonRun[]     @relation("CurrentExecution")
+  artifacts            ExecutionArtifact[]
+  testCase             TestCase            @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  triggeredBy          User?               @relation("TriggeredBy", fields: [triggeredById], references: [id])
+  failureAnalysis      FailureAnalysis?
+
+  @@index([testCaseId])
+  @@index([status])
+  @@map("executions")
+}
+
+model ExecutionArtifact {
+  id          String       @id @default(cuid())
+  executionId String
+  type        ArtifactType
+  storageUrl  String
+  sizeBytes   Int?
+  createdAt   DateTime     @default(now())
+  execution   Execution    @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId])
+  @@map("execution_artifacts")
+}
+
+model FailureAnalysis {
+  id              String                  @id @default(cuid())
+  executionId     String                  @unique
+  rootCause       String
+  severity        Severity                @default(MINOR)
+  suggestedFix    String?
+  confidence      Float                   @default(0)
+  analysisModel   String                  @default("gpt-4o")
+  createdAt       DateTime                @default(now())
+  classification  FailureClassification   @default(UNKNOWN)
+  execution       Execution               @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  regressionFlags RegressionFlag[]
+  suggestions     SelfHealingSuggestion[]
+
+  @@map("failure_analyses")
+}
+
+model SelfHealingSuggestion {
+  id                String           @id @default(cuid())
+  failureAnalysisId String
+  originalSelector  String
+  suggestedSelector String
+  reasoning         String
+  status            SuggestionStatus @default(PENDING)
+  reviewedById      String?
+  createdAt         DateTime         @default(now())
+  reviewedAt        DateTime?
+  failureAnalysis   FailureAnalysis  @relation(fields: [failureAnalysisId], references: [id], onDelete: Cascade)
+  reviewedBy        User?            @relation("ReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([failureAnalysisId])
+  @@map("self_healing_suggestions")
+}
+
+model RegressionFlag {
+  id                String          @id @default(cuid())
+  failureAnalysisId String
+  description       String
+  isConfirmed       Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  failureAnalysis   FailureAnalysis @relation(fields: [failureAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([failureAnalysisId])
+  @@map("regression_flags")
+}
+
+model ComparisonRun {
+  id                 String    @id @default(cuid())
+  baseExecutionId    String
+  currentExecutionId String
+  summary            String
+  regressionCount    Int       @default(0)
+  createdAt          DateTime  @default(now())
+  baseExecution      Execution @relation("BaseExecution", fields: [baseExecutionId], references: [id])
+  currentExecution   Execution @relation("CurrentExecution", fields: [currentExecutionId], references: [id])
+
+  @@index([baseExecutionId])
+  @@index([currentExecutionId])
+  @@map("comparison_runs")
+}
+
+model AgentMemory {
+  id        String                 @id @default(cuid())
+  projectId String
+  category  MemoryCategory
+  content   Json
+  embedding Unsupported("vector")?
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  project   Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, category])
+  @@map("agent_memories")
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String
+  summary   String
+  content   Json
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("reports")
+}
 
 enum UserRole {
   OWNER
@@ -117,339 +405,9 @@ enum SuggestionStatus {
   AUTO_APPLIED
 }
 
-// ============================================================
-// TENANCY & IDENTITÉ
-// ============================================================
-
-model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users    User[]
-  projects Project[]
-
-  @@map("organizations")
-}
-
-model User {
-  id             String   @id @default(cuid())
-  organizationId String
-  email          String   @unique
-  passwordHash   String
-  fullName       String
-  role           UserRole @default(MEMBER)
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  refreshTokens     RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-  triggeredExecutions Execution[]        @relation("TriggeredBy")
-  reviewedSuggestions SelfHealingSuggestion[] @relation("ReviewedBy")
-
-  @@index([organizationId])
-  @@map("users")
-}
-
-model RefreshToken {
-  id                String   @id @default(cuid())
-  userId            String
-  tokenHash         String   @unique
-  userAgent         String?
-  ipAddress         String?
-  expiresAt         DateTime
-  revokedAt         DateTime?
-  replacedByTokenId String?
-  createdAt         DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([tokenHash])
-  @@map("refresh_tokens")
-}
-
-model PasswordResetToken {
-  id        String   @id @default(cuid())
-  userId    String
-  tokenHash String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([tokenHash])
-  @@map("password_reset_tokens")
-}
-
-// ============================================================
-// PROJET & DÉCOUVERTE
-// ============================================================
-
-model Project {
-  id             String        @id @default(cuid())
-  organizationId String
-  name           String
-  baseUrl        String
-  status         ProjectStatus @default(ACTIVE)
-  // Domaines/chemins explicitement interdits au crawler (ex: /checkout, /delete-account)
-  denylistPaths  String[]      @default([])
-  maxCrawlDepth  Int           @default(3)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  discoveries  Discovery[]
-  scenarios    Scenario[]
-  memories     AgentMemory[]
-  reports      Report[]
-
-  @@index([organizationId])
-  @@map("projects")
-}
-
-model Discovery {
-  id          String          @id @default(cuid())
-  projectId   String
-  status      DiscoveryStatus @default(PENDING)
-  maxDepth    Int             @default(3)
-  startedAt   DateTime?
-  completedAt DateTime?
-  errorMessage String?
-  createdAt   DateTime        @default(now())
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  pages   Page[]
-
-  @@index([projectId])
-  @@map("discoveries")
-}
-
-model Page {
-  id          String   @id @default(cuid())
-  discoveryId String
-  url         String
-  title       String?
-  depth       Int
-  screenshotUrl String?
-  createdAt   DateTime @default(now())
-
-  discovery Discovery    @relation(fields: [discoveryId], references: [id], onDelete: Cascade)
-  elements  DomElement[]
-
-  @@index([discoveryId])
-  @@unique([discoveryId, url])
-  @@map("pages")
-}
-
-model DomElement {
-  id         String      @id @default(cuid())
-  pageId     String
-  type       ElementType
-  selector   String
-  label      String?
-  // Attributs bruts capturés (name, placeholder, aria-label, etc.)
-  attributes Json?
-  isVisible  Boolean     @default(true)
-  createdAt  DateTime    @default(now())
-
-  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
-
-  @@index([pageId])
-  @@map("dom_elements")
-}
-
-// ============================================================
-// GÉNÉRATION IA : SCÉNARIOS & TESTS
-// ============================================================
-
-model Scenario {
-  id          String           @id @default(cuid())
-  projectId   String
-  title       String
-  description String
-  priority    ScenarioPriority @default(MEDIUM)
-  status      ScenarioStatus   @default(DRAFT)
-  // Objectif métier généré par l'agent, sert de trace d'intention
-  businessGoal String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  testCases TestCase[]
-
-  @@index([projectId])
-  @@map("scenarios")
-}
-
-model TestCase {
-  id           String         @id @default(cuid())
-  scenarioId   String
-  filePath     String
-  sourceCode   String         @db.Text
-  status       TestCaseStatus @default(GENERATED)
-  generationModel String      @default("gpt-4o")
-  version      Int            @default(1)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-
-  scenario   Scenario    @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  executions Execution[]
-
-  @@index([scenarioId])
-  @@map("test_cases")
-}
-
-// ============================================================
-// EXÉCUTION & ARTEFACTS
-// ============================================================
-
-model Execution {
-  id           String          @id @default(cuid())
-  testCaseId   String
-  status       ExecutionStatus @default(QUEUED)
-  triggeredById String?
-  startedAt    DateTime?
-  completedAt  DateTime?
-  durationMs   Int?
-  errorMessage String?         @db.Text
-  createdAt    DateTime        @default(now())
-
-  testCase        TestCase             @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
-  triggeredBy     User?                 @relation("TriggeredBy", fields: [triggeredById], references: [id])
-  artifacts       ExecutionArtifact[]
-  failureAnalysis FailureAnalysis?
-  comparisonsAsBase    ComparisonRun[] @relation("BaseExecution")
-  comparisonsAsCurrent ComparisonRun[] @relation("CurrentExecution")
-
-  @@index([testCaseId])
-  @@index([status])
-  @@map("executions")
-}
-
-model ExecutionArtifact {
-  id          String       @id @default(cuid())
-  executionId String
-  type        ArtifactType
-  storageUrl  String
-  sizeBytes   Int?
-  createdAt   DateTime     @default(now())
-
-  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
-
-  @@index([executionId])
-  @@map("execution_artifacts")
-}
-
-model FailureAnalysis {
-  id           String   @id @default(cuid())
-  executionId  String   @unique
-  rootCause    String   @db.Text
-  severity     Severity @default(MINOR)
-  suggestedFix String?  @db.Text
-  confidence   Float    @default(0)
-  analysisModel String  @default("gpt-4o")
-  createdAt    DateTime @default(now())
-
-  execution   Execution                @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  suggestions SelfHealingSuggestion[]
-  regressionFlags RegressionFlag[]
-
-  @@map("failure_analyses")
-}
-
-// ============================================================
-// AUTO-RÉPARATION & RÉGRESSION
-// ============================================================
-
-model SelfHealingSuggestion {
-  id                 String            @id @default(cuid())
-  failureAnalysisId  String
-  originalSelector   String
-  suggestedSelector  String
-  reasoning          String            @db.Text
-  status             SuggestionStatus  @default(PENDING)
-  reviewedById       String?
-  createdAt          DateTime          @default(now())
-  reviewedAt         DateTime?
-
-  failureAnalysis FailureAnalysis @relation(fields: [failureAnalysisId], references: [id], onDelete: Cascade)
-  reviewedBy      User?           @relation("ReviewedBy", fields: [reviewedById], references: [id])
-
-  @@index([failureAnalysisId])
-  @@map("self_healing_suggestions")
-}
-
-model RegressionFlag {
-  id                String   @id @default(cuid())
-  failureAnalysisId String
-  description       String   @db.Text
-  isConfirmed        Boolean  @default(false)
-  createdAt          DateTime @default(now())
-
-  failureAnalysis FailureAnalysis @relation(fields: [failureAnalysisId], references: [id], onDelete: Cascade)
-
-  @@index([failureAnalysisId])
-  @@map("regression_flags")
-}
-
-model ComparisonRun {
-  id                 String   @id @default(cuid())
-  baseExecutionId    String
-  currentExecutionId String
-  summary            String   @db.Text
-  regressionCount    Int      @default(0)
-  createdAt          DateTime @default(now())
-
-  baseExecution    Execution @relation("BaseExecution", fields: [baseExecutionId], references: [id])
-  currentExecution Execution @relation("CurrentExecution", fields: [currentExecutionId], references: [id])
-
-  @@index([baseExecutionId])
-  @@index([currentExecutionId])
-  @@map("comparison_runs")
-}
-
-// ============================================================
-// MÉMOIRE DE L'AGENT
-// ============================================================
-
-model AgentMemory {
-  id        String         @id @default(cuid())
-  projectId String
-  category  MemoryCategory
-  // Contenu structuré libre (ex: {selector, failureCount, lastSeenAt})
-  content   Json
-  // Champ prévu pour une future extension pgvector (Phase 9) — embedding
-  // stocké en JSON en attendant l'activation de l'extension vector
-  embedding Json?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([projectId, category])
-  @@map("agent_memories")
-}
-
-// ============================================================
-// RAPPORTS
-// ============================================================
-
-model Report {
-  id        String   @id @default(cuid())
-  projectId String
-  title     String
-  summary   String   @db.Text
-  content   Json
-  createdAt DateTime @default(now())
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([projectId])
-  @@map("reports")
+enum FailureClassification {
+  SITE_DEFECT
+  STALE_TEST
+  FLAKY_ENVIRONMENT
+  UNKNOWN
 }

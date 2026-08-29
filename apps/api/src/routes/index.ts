@@ -6,13 +6,16 @@ import { Router } from "express";
 import { healthRouter } from "../modules/health/health.routes.js";
 import { projectsRouter } from "../modules/projects/projects.routes.js";
 import { authRouter } from "../modules/auth/auth.routes.js";
+import { discoveriesRouter } from "../modules/discoveries/discoveries.routes.js";
+import { scenariosRouter } from "../modules/scenarios/scenarios.routes.js";
+import { executionsRouter, testExecutionsRouter } from "../modules/executions/executions.routes.js";
 
 export const apiRouter = Router();
 
 apiRouter.use(healthRouter); // GET /api/v1/health
 apiRouter.use("/projects", projectsRouter); // Phase 3 — module de référence
 apiRouter.use("/auth", authRouter); // Phase 4
-// Phase 7  : apiRouter.use("/discoveries", discoveriesRouter);
-// Phase 10 : apiRouter.use("/scenarios", scenariosRouter);
-// Phase 11 : apiRouter.use("/tests", testCasesRouter);
-// Phase 12 : apiRouter.use("/executions", executionsRouter);
+apiRouter.use("/discoveries", discoveriesRouter); // Phase 7
+apiRouter.use("/scenarios", scenariosRouter); // Phase 10
+apiRouter.use("/tests/:testId", testExecutionsRouter); // Phase 12 — sous-route d'un TestCase
+apiRouter.use("/executions", executionsRouter); // Phase 12 — routes à plat

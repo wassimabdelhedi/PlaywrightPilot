@@ -16,6 +16,7 @@
     "@platform/config": "workspace:*",
     "@platform/database": "workspace:*",
     "@platform/logger": "workspace:*",
+    "@platform/queue": "workspace:*",
     "argon2": "^0.40.1",
     "compression": "^1.7.4",
     "cors": "^2.8.5",

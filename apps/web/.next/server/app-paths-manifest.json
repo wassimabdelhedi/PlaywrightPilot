@@ -1,7 +1,0 @@
-{
-  "/api/auth/logout/route": "app/api/auth/logout/route.js",
-  "/(auth)/reset-password/page": "app/(auth)/reset-password/page.js",
-  "/(auth)/forgot-password/page": "app/(auth)/forgot-password/page.js",
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(dashboard)/projects/page": "app/(dashboard)/projects/page.js"
-}

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { setSessionCookies } from "@/lib/session";
 
-const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:4000";
+const API_BASE_URL = process.env.API_BASE_URL ?? "http://127.0.0.1:4000";
 
 async function loginAction(formData: FormData) {
   "use server";

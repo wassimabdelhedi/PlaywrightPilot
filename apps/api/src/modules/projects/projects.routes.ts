@@ -13,9 +13,14 @@ import {
   projectIdParamSchema,
   updateProjectSchema,
 } from "./projects.schema.js";
+import { projectScenariosRouter } from "../scenarios/scenarios.routes.js";
+import { projectReportsRouter } from "../reports/reports.routes.js";
 
 export const projectsRouter = Router();
 projectsRouter.use(authenticate);
+
+projectsRouter.use("/:projectId/scenarios", projectScenariosRouter);
+projectsRouter.use("/:projectId/reports", projectReportsRouter);
 
 projectsRouter.post("/", validate(createProjectSchema, "body"), asyncHandler(controller.create));
 
@@ -25,6 +30,24 @@ projectsRouter.get(
   "/:id",
   validate(projectIdParamSchema, "params"),
   asyncHandler(controller.getById)
+);
+
+projectsRouter.get(
+  "/:id/executions",
+  validate(projectIdParamSchema, "params"),
+  asyncHandler(controller.listExecutions)
+);
+
+projectsRouter.post(
+  "/:id/autopilot",
+  validate(projectIdParamSchema, "params"),
+  asyncHandler(controller.triggerAutopilot)
+);
+
+projectsRouter.post(
+  "/:id/autopilot/stop",
+  validate(projectIdParamSchema, "params"),
+  asyncHandler(controller.stopAutopilot)
 );
 
 projectsRouter.patch(

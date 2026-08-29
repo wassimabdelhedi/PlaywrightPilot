@@ -9,7 +9,7 @@ import { getAccessToken, setSessionCookies, clearSessionCookies } from "./sessio
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:4000";
+const API_BASE_URL = process.env.API_BASE_URL ?? "http://127.0.0.1:4000";
 const WEB_BASE_URL = process.env.NEXT_PUBLIC_WEB_URL;
 
 function getWebAppUrl() {
